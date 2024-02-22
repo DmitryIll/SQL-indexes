@@ -223,8 +223,30 @@ CREATE INDEX idx_payment_date ON payment (date(payment_date));
 
 ![alt text](image-14.png)
 
-В общем почему-то с индексом только хуже.
-Все что смог - оптимизировал.
+Тогда "все вычисления date" как бы вынесем на сторону с чем сравниваем:
+
+Опять делаю индекс:
+
+```sql
+CREATE INDEX idx_payment_date ON payment (payment_date);  
+```
+
+И правлю запрос так:
+
+```sql
+explain analyze
+select distinct concat(c.last_name, ' ', c.first_name), sum(p.amount) over (partition by c.customer_id)
+from payment p 
+join rental r on p.payment_date = r.rental_date
+join customer c on r.customer_id = c.customer_id
+join inventory i on  i.inventory_id = r.inventory_id
+where p.payment_date >= "2005-07-30" and p.payment_date < DATE_ADD("2005-07-30", INTERVAL 1 DAY);
+```
+Выполнение стало около 11 - 14 мс. чуть лучше, хоть и не на много. Возможно по тому, что сама таблица с платежами очень маленькая по современным меркам. И тут нет большой разницы - по индексу выходить или full scan делать всего столбца.
+Результат анализа:
+
+![alt text](image-15.png)
+
 
 ## Дополнительные задания (со звёздочкой*)
 Эти задания дополнительные, то есть не обязательные к выполнению, и никак не повлияют на получение вами зачёта по этому домашнему заданию. Вы можете их выполнить, если хотите глубже шире разобраться в материале.
